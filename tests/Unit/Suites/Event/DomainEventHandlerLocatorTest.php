@@ -6,7 +6,6 @@ namespace LizardsAndPumpkins\Messaging\Event;
 
 use LizardsAndPumpkins\Messaging\Event\Exception\UnableToFindDomainEventHandlerException;
 use LizardsAndPumpkins\Messaging\Queue\Message;
-use LizardsAndPumpkins\Core\Factory\MasterFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -20,43 +19,38 @@ class DomainEventHandlerLocatorTest extends TestCase
      */
     private $locator;
 
-    /**
-     * @var MasterFactory|MockObject
-     */
-    private $factory;
-
     final protected function setUp(): void
     {
-        $this->factory = $this->getMockBuilder(MasterFactory::class)
-            ->onlyMethods(get_class_methods(MasterFactory::class))
-            ->addMethods(['createFooDomainEventHandler'])
-            ->getMock();
-
-        $this->locator = new DomainEventHandlerLocator($this->factory);
+        $this->locator = new DomainEventHandlerLocator();
     }
 
     public function testExceptionIsThrownIfNoHandlerIsLocated(): void
     {
+        $eventCode = 'non_existing_domain_event';
+
         /** @var Message|MockObject $stubDomainEvent */
         $stubDomainEvent = $this->createMock(Message::class);
-        $stubDomainEvent->method('getName')->willReturn('non_existing_domain_event');
+        $stubDomainEvent->method('getName')->willReturn($eventCode);
 
         $this->expectException(UnableToFindDomainEventHandlerException::class);
+        $this->expectExceptionMessage(sprintf('Unable to find a handler for "%s" event', $eventCode));
 
         $this->locator->getHandlerFor($stubDomainEvent);
     }
 
-    public function testProductWasUpdatedDomainEventHandlerIsLocatedAndReturned(): void
+    public function testReturnsDomainEventHandler(): void
     {
-        $stubEventHandler = $this->createMock(DomainEventHandler::class);
-        $this->factory->method('createFooDomainEventHandler')->willReturn($stubEventHandler);
+        $eventCode = 'foo';
+
+        $dummyEventHandler = $this->createMock(DomainEventHandler::class);
 
         /** @var Message|MockObject $stubDomainEvent */
         $stubDomainEvent = $this->createMock(Message::class);
-        $stubDomainEvent->method('getName')->willReturn('foo');
+        $stubDomainEvent->method('getName')->willReturn($eventCode);
 
+        $this->locator->register($eventCode, $dummyEventHandler);
         $result = $this->locator->getHandlerFor($stubDomainEvent);
 
-        $this->assertInstanceOf(DomainEventHandler::class, $result);
+        $this->assertSame($dummyEventHandler, $result);
     }
 }

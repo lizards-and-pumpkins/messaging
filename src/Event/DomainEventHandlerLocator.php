@@ -4,45 +4,29 @@ declare(strict_types=1);
 
 namespace LizardsAndPumpkins\Messaging\Event;
 
-use LizardsAndPumpkins\Core\Factory\MasterFactory;
 use LizardsAndPumpkins\Messaging\Event\Exception\UnableToFindDomainEventHandlerException;
 use LizardsAndPumpkins\Messaging\Queue\Message;
 
 class DomainEventHandlerLocator
 {
     /**
-     * @var MasterFactory
+     * @var DomainEventHandler
      */
-    private $factory;
+    private $handlers = [];
 
-    public function __construct(MasterFactory $factory)
+    public function register(string $eventCode, DomainEventHandler $handler): void
     {
-        $this->factory = $factory;
+        $this->handlers[$eventCode] = $handler;
     }
 
     public function getHandlerFor(Message $event): DomainEventHandler
     {
-        $eventHandlerClass = $this->getUnqualifiedDomainEventHandlerClassName($event);
-        $method = 'create' . $eventHandlerClass;
-
-        if (! method_exists($this->factory, $method)) {
+        if (! array_key_exists($event->getName(), $this->handlers)) {
             throw new UnableToFindDomainEventHandlerException(
-                sprintf('Unable to find a handler "%s" for event "%s"', $eventHandlerClass, $event->getName())
+                sprintf('Unable to find a handler for "%s" event', $event->getName())
             );
         }
 
-        return $this->factory->{$method}($event);
-    }
-
-    private function getUnqualifiedDomainEventHandlerClassName(Message $event): string
-    {
-        $camelCaseEventName = $this->snakeCaseToCamelCase($event->getName());
-
-        return $camelCaseEventName . 'DomainEventHandler';
-    }
-
-    private function snakeCaseToCamelCase(string $name): string
-    {
-        return str_replace(' ', '', ucwords(str_replace('_', ' ', $name)));
+        return $this->handlers[$event->getName()];
     }
 }

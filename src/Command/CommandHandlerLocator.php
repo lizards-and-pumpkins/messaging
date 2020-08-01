@@ -4,45 +4,29 @@ declare(strict_types=1);
 
 namespace LizardsAndPumpkins\Messaging\Command;
 
-use LizardsAndPumpkins\Core\Factory\MasterFactory;
 use LizardsAndPumpkins\Messaging\Command\Exception\UnableToFindCommandHandlerException;
 use LizardsAndPumpkins\Messaging\Queue\Message;
 
 class CommandHandlerLocator
 {
     /**
-     * @var MasterFactory
+     * @var CommandHandler[]
      */
-    private $factory;
+    private $handlers = [];
 
-    public function __construct(MasterFactory $factory)
+    public function register(string $commandCode, CommandHandler $handler): void
     {
-        $this->factory = $factory;
+        $this->handlers[$commandCode] = $handler;
     }
 
     public function getHandlerFor(Message $command): CommandHandler
     {
-        $commandHandlerClass = $this->getUnqualifiedCommandClassName($command);
-        $method = 'create' . $commandHandlerClass;
-
-        if (! method_exists($this->factory, $method)) {
+        if (! array_key_exists($command->getName(), $this->handlers)) {
             throw new UnableToFindCommandHandlerException(
-                sprintf('Unable to find a handler "%s" for command "%s"', $commandHandlerClass, $command->getName())
+                sprintf('Unable to find a handler for "%s" command', $command->getName())
             );
         }
 
-        return $this->factory->{$method}($command);
-    }
-
-    private function getUnqualifiedCommandClassName(Message $event): string
-    {
-        $camelCaseEventName = $this->snakeCaseToCamelCase($event->getName() . '_command');
-
-        return $camelCaseEventName . 'Handler';
-    }
-
-    private function snakeCaseToCamelCase(string $name): string
-    {
-        return str_replace(' ', '', ucwords(str_replace('_', ' ', $name)));
+        return $this->handlers[$command->getName()];
     }
 }

@@ -6,7 +6,6 @@ namespace LizardsAndPumpkins\Messaging\Command;
 
 use LizardsAndPumpkins\Messaging\Command\Exception\UnableToFindCommandHandlerException;
 use LizardsAndPumpkins\Messaging\Queue\Message;
-use LizardsAndPumpkins\Core\Factory\MasterFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -20,44 +19,36 @@ class CommandHandlerLocatorTest extends TestCase
      */
     private $locator;
 
-    /**
-     * @var MasterFactory
-     */
-    private $factory;
-
     final protected function setUp(): void
     {
-        $this->factory = $this->getMockBuilder(MasterFactory::class)
-            ->onlyMethods(get_class_methods(MasterFactory::class))
-            ->addMethods(['createFooCommandHandler'])
-            ->getMock();
-
-        $this->locator = new CommandHandlerLocator($this->factory);
+        $this->locator = new CommandHandlerLocator();
     }
 
     public function testExceptionIsThrownIfNoHandlerIsLocated(): void
     {
+        $commandCode = 'non_existing_foo';
+
         /** @var Message|MockObject $stubCommand */
         $stubCommand = $this->createMock(Message::class);
-        $stubCommand->method('getName')->willReturn('non_existing_foo');
+        $stubCommand->method('getName')->willReturn($commandCode);
 
         $this->expectException(UnableToFindCommandHandlerException::class);
+        $this->expectExceptionMessage(sprintf('Unable to find a handler for "%s" command', $commandCode));
 
         $this->locator->getHandlerFor($stubCommand);
     }
 
     public function testReturnsCommandHandler(): void
     {
-        $stubHandler = $this->createMock(CommandHandler::class);
+        $commandCode = 'foo';
 
-        $this->factory->expects($this->once())
-            ->method('createFooCommandHandler')
-            ->willReturn($stubHandler);
+        $dummyCommandHandler = $this->createMock(CommandHandler::class);
 
         /** @var Message|MockObject $stubCommand */
         $stubCommand = $this->createMock(Message::class);
-        $stubCommand->method('getName')->willReturn('foo');
+        $stubCommand->method('getName')->willReturn($commandCode);
 
+        $this->locator->register($commandCode, $dummyCommandHandler);
         $result = $this->locator->getHandlerFor($stubCommand);
 
         $this->assertInstanceOf(CommandHandler::class, $result);
