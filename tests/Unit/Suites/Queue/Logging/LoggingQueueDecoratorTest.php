@@ -83,4 +83,10 @@ class LoggingQueueDecoratorTest extends TestCase
         $this->mockLogger->expects($this->once())->method('log')->with($this->isInstanceOf(QueueAddLogMessage::class));
         $this->decorator->add($testData);
     }
+
+    public function testItDelegatesClearCallsToTheDecoratedQueue()
+    {
+        $this->decoratedQueue->expects($this->once())->method('clear');
+        $this->decorator->clear();
+    }
 }

@@ -43,4 +43,9 @@ class LoggingQueueDecorator implements Queue
     {
         $this->decoratedQueue->consume($messageReceiver, $numberOfMessagesToConsume);
     }
+
+    public function clear(): void
+    {
+        $this->decoratedQueue->clear();
+    }
 }
