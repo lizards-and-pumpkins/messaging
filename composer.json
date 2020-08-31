@@ -19,7 +19,6 @@
     "lizards-and-pumpkins/logging": "dev-master"
   },
   "require-dev": {
-    "ext-xdebug": "*",
     "phpunit/phpunit": "~9.2",
     "lizards-and-pumpkins/coding-standards": "dev-master"
   },
